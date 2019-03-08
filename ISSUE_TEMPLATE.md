@@ -1,39 +1,39 @@
-<!--
-Please use the following template to submit your issue. Following this template will allow us to quickly investigate and help you with your issue. Please be aware that issues which do not conform to this template may be closed.
--->
+### Describe the bug
 
-### Status
-
-BUG REPORT / TASK
-
-### Checklist
-
-Add checklist if this is a task
-
-- [x] Add Facebook login
-- [ ] Support X
+How does the program work in its current state? A clear and concise description of what you expected to happen.
 
 ### Steps to reproduce
 
-1. First step
-2. Second step
-3. Third step
+1. Go to '...'
+2. Click on '....'
+3. Scroll down to '....'
+4. See error
 
 ### Expected behaviour
 
-How do you think the program should work? Add screenshots and code blocks if necessary.
+How do you think the program should work? Add screenshots and code blocks if necessary
 
-### Actual behaviour
+**Screenshots**
 
-How does the program work in its current state?
+If applicable, add screenshots to help explain your problem.
 
 ### Environment
 
 You may write here the specifications like the version of the project, operating system, or hardware if applicable.
+
+**Desktop (please complete the following information):**
+ - OS: [e.g. iOS]
+ - Browser [e.g. chrome, safari]
+ - Version [e.g. 22]
+
+**Smartphone (please complete the following information):**
+ - Device: [e.g. iPhone6]
+ - OS: [e.g. iOS8.1]
+ - Browser [e.g. stock browser, safari]
+ - Version [e.g. 22]
 
 ### Logs / Stack trace
 
 ```
 Insert your log/stack trace here
 ```
-

@@ -1,39 +1,17 @@
-<!--
-This is a guide to use this Pull Request Template
-> DELETE THIS BLOCK TO AFTER READING
-
-# Title
-- Put [WIP] in front of the Pull Request that you are working on
-- Clear [WIP] after you completed and ping the reviewer
-
-# Body
-- You have to fill out all the sections
-- Put N/A if the section is nil
--->
-
-#### Status
-
-READY / IN DEVELOPMENT / HOLD
-
 #### What's this PR do?
 
 - [x] Add new routes for user
-- [ ] Add instruction for using docker-compose
-- [ ] ...
+- [x] Add instruction for using docker-compose
 
-#### Where should the reviewer start?
+#### What are the relevant Git tickets?
 
-#### How should this be manually tested?
-
-#### Any background context you want to provide?
-
-#### What are the relevant Git/YouTrack tickets?
-
-// Put in link to Git Issue or YouTrack ticket
+// Put in link to Git Issue
 
 #### Screenshots (if appropriate)
 
-#### Questions:
+// Use [Licecap](http://www.cockos.com/licecap/) to share a screencast gif.
+
+#### Any background context you want to provide? (if appropriate)
 
 - Is there a blog post?
 - Does the knowledge base need an update?
