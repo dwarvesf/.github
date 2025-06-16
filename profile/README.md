@@ -19,8 +19,8 @@ This is part of our continuous learning engine where we build the 1% improvement
 
 ## Current focus
 
-- **Explore**: [on agent](https://memo.d.foundation/updates/arc/on-agent.md), [monitoring](https://memo.d.foundation/updates/build-log/monitoring/readme.md), [vibe coding](https://memo.d.foundation/updates/build-log/vibe-coding/)
-- **Recent ships**: [company](https://memo.d.foundation/updates/build-log/company/readme.md), [brainery](https://memo.d.foundation/updates/build-log/brainery/), [memo](https://memo.d.foundation/updates/build-log/memo/), [mcp-playbook](https://memo.d.foundation/updates/build-log/playbook/)  
+- **Explore**: [on agent](https://memo.d.foundation/updates/arc/on-agent/), [monitoring](https://memo.d.foundation/updates/build-log/monitoring/), [vibe coding](https://memo.d.foundation/updates/build-log/vibe-coding/)
+- **Recent ships**: [company](https://memo.d.foundation/updates/build-log/company/), [brainery](https://memo.d.foundation/updates/build-log/brainery/), [memo](https://memo.d.foundation/updates/build-log/memo/), [mcp-playbook](https://memo.d.foundation/updates/build-log/playbook/)  
 - **Hiring**: [growth lead](https://memo.d.foundation/careers/open-positions/growth-lead/), [sales manager](https://memo.d.foundation/careers/open-positions/sales-manager/)
 - **AI services**: [AI development, DataOps, custom AI platforms](https://memo.d.foundation/profile/#ai-services)
 - **Web3 services**: [blockchain integration, smart contracts, DeFi solutions](https://memo.d.foundation/profile/#web3-services)
