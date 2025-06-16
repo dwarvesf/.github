@@ -19,16 +19,16 @@ This is part of our continuous learning engine where we build the 1% improvement
 
 ## Current focus
 
-- **Explore**: [vibe coding](https://memo.d.foundation/updates/build-log/vibe-coding/)
-- **Recent ships**: [brainery](https://memo.d.foundation/updates/build-log/brainery/), [memo](https://memo.d.foundation/updates/build-log/memo/), [mcp-playbook](https://memo.d.foundation/updates/build-log/playbook/)  
+- **Explore**: [on agent](https://memo.d.foundation/updates/arc/on-agent.md), [monitoring](https://memo.d.foundation/updates/build-log/monitoring/readme.md), [vibe coding](https://memo.d.foundation/updates/build-log/vibe-coding/)
+- **Recent ships**: [company](https://memo.d.foundation/updates/build-log/company/readme.md), [brainery](https://memo.d.foundation/updates/build-log/brainery/), [memo](https://memo.d.foundation/updates/build-log/memo/), [mcp-playbook](https://memo.d.foundation/updates/build-log/playbook/)  
 - **Hiring**: [growth lead](https://memo.d.foundation/careers/open-positions/growth-lead/), [sales manager](https://memo.d.foundation/careers/open-positions/sales-manager/)
 - **AI services**: [AI development, DataOps, custom AI platforms](https://memo.d.foundation/profile/#ai-services)
 - **Web3 services**: [blockchain integration, smart contracts, DeFi solutions](https://memo.d.foundation/profile/#web3-services)
 
 ## Get involved
 
-🩷 [Join our Discord Network](https://discord.gg/dfoundation) →  
+👾 [Join our Discord Network](https://discord.gg/dfoundation) →  
 🔥 [Contribute to our Memo](https://github.com/dwarvesf/brainery) →  
 🤝 [Join us, we are hiring](https://memo.d.foundation/careers) →  
-🙋 [Give us a helping hand](http://memo.d.foundation/earn/) →
+🙋 [Give us a helping hand](http://memo.d.foundation/earn) →
 
