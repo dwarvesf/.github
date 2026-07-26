@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# Canonical org-wide check: reject coding-agent attribution.
+#
+# A commit is authored by the human who reviewed it and chose to ship it. Use
+# whatever agent you like to write the code; the history should not claim the
+# agent co-wrote it. A Co-authored-by trailer is an attribution claim, and it
+# makes `git log --author`, `git blame`, and every contributor statistic answer
+# a question nobody asked.
+#
+# WHY AN ATTRIBUTION-SHAPE MATCH, NOT A KEYWORD MATCH: repos that build on or
+# discuss these tools name them constantly and legitimately. Grepping the word
+# would block honest commits. The signal is the machine ATTRIBUTION shape, a
+# trailer line, a generated-with signature, an agent service-account identity,
+# never the topic.
+#
+# Three modes, one pattern set, so the rule cannot drift between callers:
+#   commit-msg hook   no-agent-trailers --file "$1"
+#   CI, commits       no-agent-trailers --range "$BASE_SHA..HEAD"
+#   CI, PR body       printf '%s' "$PR_BODY" | no-agent-trailers --stdin "pull request body"
+#
+# The PR-body mode exists because a pull request description is GitHub
+# metadata that never enters git, so no commit check and no local hook can see
+# it.
+set -euo pipefail
+
+AGENTS='claude|codex|copilot|cursor|devin|aider|gemini|chatgpt|openai|anthropic|windsurf|cline|jules|tabnine|sourcegraph'
+
+TRAILER="^[[:space:]]*(co-authored-by|signed-off-by):.*(${AGENTS})"
+SIGNATURE="generated with[[:space:]]*\[?(${AGENTS})"
+EMAILS="noreply@anthropic\.com|copilot(\[bot\])?@users\.noreply\.github\.com|@users\.noreply\.(openai|anthropic)\.com"
+
+fail() {
+  echo "" >&2
+  echo "BLOCKED: coding-agent attribution found in $1" >&2
+  echo "" >&2
+  printf '%s\n' "$2" | sed 's/^/    /' >&2
+  echo "" >&2
+  echo "Strip the trailer and the 'Generated with' block, then push again." >&2
+  echo "" >&2
+  echo "To stop Claude Code emitting them at all, commit a .claude/settings.json" >&2
+  echo "containing \"includeCoAuthoredBy\": false. Because that file is tracked," >&2
+  echo "it applies to everyone who clones, with no per-developer setup." >&2
+  echo "" >&2
+  exit 1
+}
+
+check_text() {
+  local label=$1 text=$2 hit
+  hit=$(printf '%s\n' "$text" | grep -inE "${TRAILER}|${SIGNATURE}" || true)
+  [ -n "$hit" ] && fail "$label" "$hit"
+  return 0
+}
+
+check_identity() {
+  local label=$1 ident=$2 hit
+  hit=$(printf '%s\n' "$ident" | grep -inE "${EMAILS}" || true)
+  [ -n "$hit" ] && fail "$label (author/committer identity)" "$hit"
+  return 0
+}
+
+case "${1:---file}" in
+  --file)
+    # Strip comment lines so a commented-out trailer in the template is ignored.
+    msg=$(grep -v '^#' "${2:?usage: no-agent-trailers --file <path>}")
+    check_text "the commit message" "$msg"
+    ;;
+  --range)
+    range=${2:?usage: no-agent-trailers --range <rev-range>}
+    for sha in $(git log --format=%H "$range"); do
+      check_text "commit ${sha:0:8}" "$(git log -1 --format=%B "$sha")"
+      check_identity "commit ${sha:0:8}" "$(git log -1 --format='%an <%ae>%n%cn <%ce>' "$sha")"
+    done
+    ;;
+  --stdin)
+    # Read from stdin so untrusted text is never an argument the shell could
+    # reinterpret.
+    check_text "${2:-stdin}" "$(cat)"
+    ;;
+  *)
+    echo "usage: no-agent-trailers [--file <path> | --range <rev-range> | --stdin <label>]" >&2
+    exit 2
+    ;;
+esac
+
+echo "no agent attribution found"

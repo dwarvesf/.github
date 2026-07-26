@@ -1,0 +1,49 @@
+name: no agent attribution
+
+# Reusable org-wide check. Any dwarvesf repo adopts it by adding a job that
+# calls this workflow, with no script to copy and therefore nothing to drift:
+#
+#   jobs:
+#     commit-hygiene:
+#       uses: dwarvesf/.github/.github/workflows/no-agent-attribution.yml@master
+#
+# The calling workflow must be triggered by `pull_request`, since the check
+# reads the pull request's base SHA and body.
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: no coding-agent attribution
+    runs-on: ubuntu-latest
+    steps:
+      - name: check out the calling repository
+        uses: actions/checkout@v4
+        with:
+          # The commit walk covers every commit on the branch, so the full
+          # history has to be present.
+          fetch-depth: 0
+
+      - name: check out the canonical script
+        uses: actions/checkout@v4
+        with:
+          repository: dwarvesf/.github
+          path: .agent-guard
+          # dwarvesf/.github is public, so no token is needed even when the
+          # calling repository is private.
+
+      - name: commit messages and identities
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+        run: .agent-guard/scripts/no-agent-trailers --range "$BASE_SHA..HEAD"
+
+      - name: pull request body
+        # PR_BODY is attacker-controllable text. It is passed as an environment
+        # variable and piped on stdin, never interpolated into the run line
+        # where the shell would reinterpret it.
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: printf '%s' "$PR_BODY" | .agent-guard/scripts/no-agent-trailers --stdin "pull request body"
