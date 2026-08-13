@@ -13,9 +13,9 @@ We love pull requests. If you have something you want to add or remove, please o
 
 Workflows any dwarvesf repo can call from its own `.github/workflows/`:
 
-- `no-agent-attribution.yml` — blocks commits and PR bodies with coding-agent
+- `no-agent-attribution.yml`: blocks commits and PR bodies with coding-agent
   attribution.
-- `mini-ci.yml` — runs a repo's test gate on the self-hosted Mac Mini runner
+- `mini-ci.yml`: runs a repo's test gate on the self-hosted Mac Mini runner
   instead of GitHub-hosted runners. Trusted CI only.
 
 To adopt `mini-ci`, add one job:
