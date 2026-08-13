@@ -1,0 +1,58 @@
+name: mini ci
+
+# Reusable org-wide CI: run a repo's test gate on the self-hosted Mac Mini
+# runner instead of GitHub-hosted runners. Adopt it with no script to copy:
+#
+#   jobs:
+#     test:
+#       uses: dwarvesf/.github/.github/workflows/mini-ci.yml@master
+#       with:
+#         test_command: "pnpm test"
+#
+# Scope: TRUSTED CI only (deploy gates, internal CI, core-team repos).
+# Contributor PR CI runs untrusted code and stays on GitHub-hosted runners.
+on:
+  workflow_call:
+    inputs:
+      node_version:
+        description: Node.js version for the test job
+        type: string
+        default: "22"
+      install_command:
+        description: Command to install dependencies
+        type: string
+        default: "pnpm install --frozen-lockfile"
+      build_command:
+        description: Command to build before testing; empty skips
+        type: string
+        default: ""
+      test_command:
+        description: Command to run the test suite
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: test on mac mini
+    runs-on: [self-hosted, Linux, ARM64]
+    steps:
+      - name: check out the calling repository
+        uses: actions/checkout@v5
+      - name: set up pnpm
+        uses: pnpm/action-setup@v5
+        with:
+          version: 9
+      - name: set up node
+        uses: actions/setup-node@v5
+        with:
+          node-version: ${{ inputs.node_version }}
+      - name: install
+        run: ${{ inputs.install_command }}
+      - name: build
+        if: inputs.build_command != ''
+        run: ${{ inputs.build_command }}
+      - name: test
+        run: ${{ inputs.test_command }}
