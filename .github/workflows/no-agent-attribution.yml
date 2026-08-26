@@ -9,8 +9,23 @@ name: no agent attribution
 #
 # The calling workflow must be triggered by `pull_request`, since the check
 # reads the pull request's base SHA and body.
+#
+# Defaults to a GitHub-hosted runner (dwarvesf's hosted-runner billing is off
+# for private repos, so this fails at job start there unless the caller opts
+# into its own self-hosted runner via `runs_on`):
+#
+#   jobs:
+#     commit-hygiene:
+#       uses: dwarvesf/.github/.github/workflows/no-agent-attribution.yml@master
+#       with:
+#         runs_on: '["self-hosted", "whetstone-ci"]'
 on:
   workflow_call:
+    inputs:
+      runs_on:
+        description: JSON-encoded runs-on value (a string or array of labels). Defaults to the hosted runner.
+        type: string
+        default: '"ubuntu-latest"'
 
 permissions:
   contents: read
@@ -18,7 +33,7 @@ permissions:
 jobs:
   check:
     name: no coding-agent attribution
-    runs-on: ubuntu-latest
+    runs-on: ${{ fromJSON(inputs.runs_on) }}
     steps:
       - name: check out the calling repository
         uses: actions/checkout@v4
