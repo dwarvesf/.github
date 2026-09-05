@@ -1,0 +1,41 @@
+name: CI
+
+# Starter for a PRIVATE dwarvesf repo. Private repos run CI on the Mac Mini
+# pr-shared pool; the org's GitHub Actions budget is $0, so a job that says
+# `ubuntu-latest` in a private repo stops the moment the included minutes run
+# out. Public repos may stay on GitHub-hosted runners (free).
+#
+# The pool image is Debian slim (bash, git, jq, python3, curl, tar, unzip).
+# setup-node / pnpm/action-setup bring node and pnpm; there is no `gh`, use
+# curl against the REST API when a step needs it. No secrets on this pool:
+# deploy jobs go to a trusted per-repo container (ask ops).
+
+on:
+  pull_request:
+  push:
+    branches: [$default-branch]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: [self-hosted, pr-shared]
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test

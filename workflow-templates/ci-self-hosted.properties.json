@@ -1,0 +1,6 @@
+{
+  "name": "Dwarves CI (self-hosted, private repos)",
+  "description": "Runs on the Mac Mini pr-shared pool. Private dwarvesf repos do not use GitHub-hosted runners; the org Actions budget is $0.",
+  "iconName": "octicon server",
+  "categories": ["Continuous integration"]
+}
