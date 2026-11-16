@@ -39,7 +39,9 @@ Each repo's DerivedData and SwiftPM checkouts sit under `~/ci-cache/<owner>_<rep
 
 The `macos-ui` runners live in the `mac-ui` VM (ops-toolkit `tools/mac-ui-vm`): one runner per org (dwarvesf, consolelabs), Xcode copied from the Mini. The VM screen is 2560x1440, the Mini's point size, because some tests size UI to the screen: at 1920x1200 hacker-bar's menu showed 11 rows instead of 12 and two render tests failed.
 
-Measured on the hacker-bar pilot: the test job took 62 s in the VM on a warm cache, against 106 s for the old job on the Mini host.
+Measured on the hacker-bar pilot: a PR run takes about 60 s (median was 109 s on the Mini host), and a master push runs the VM test job and the host Release build side by side in 59 s.
+
+**consolelabs repos** may only call reusable workflows owned by consolelabs (hacker-bar's Actions policy). They call the mirror `consolelabs/.github/.github/workflows/macos-app-ci.yml@main`. This file is the source of truth: change both copies in the same sitting.
 
 ## Safety rules
 
