@@ -15,7 +15,7 @@ Mac Mini host runner                     macos-ui VM on the Mac Mini
 
 | Job | Runner | Why |
 |---|---|---|
-| Unit and app-hosted tests | `[self-hosted, macos-ui]` | A test target with `TEST_HOST` launches the real app. In the VM it cannot steal the operator's screen, menu bar, login items or installed copy. |
+| Every test job of a private macOS app | `[self-hosted, macos-ui]` | One rule, whatever the test type. A test target with `TEST_HOST` launches the real app; in the VM it cannot steal the operator's screen, menu bar, login items or installed copy, and a logic-only target can gain a test host later without anyone noticing. |
 | Release build | `[self-hosted, macOS, ARM64]` | Compiling opens nothing, so it stays on the host. |
 | Agent UI checks (clicks, screenshots, permission sheets) | the same VM, through ops-toolkit `tools/mac-ui-vm` | Real input goes to the VM's own screen only. |
 | Public repos | GitHub-hosted `macos-*` is allowed | Minutes are free on public repos; private repos never use them (the org budget is $0). |
@@ -39,7 +39,7 @@ Each repo's DerivedData and SwiftPM checkouts sit under `~/ci-cache/<owner>_<rep
 
 The `macos-ui` runners live in the `mac-ui` VM (ops-toolkit `tools/mac-ui-vm`): one runner per org (dwarvesf, consolelabs), Xcode copied from the Mini. The VM screen is 2560x1440, the Mini's point size, because some tests size UI to the screen: at 1920x1200 hacker-bar's menu showed 11 rows instead of 12 and two render tests failed.
 
-Measured on the hacker-bar pilot: a PR run takes about 60 s (median was 109 s on the Mini host), and a master push runs the VM test job and the host Release build side by side in 59 s.
+Measured: blurred (logic tests only) went from a 51 s median on the host to 34 s per master push. On the hacker-bar pilot, a PR run takes about 60 s (median was 109 s on the Mini host), and a master push runs the VM test job and the host Release build side by side in 59 s.
 
 **consolelabs repos** may only call reusable workflows owned by consolelabs (hacker-bar's Actions policy). They call the mirror `consolelabs/.github/.github/workflows/macos-app-ci.yml@main`. This file is the source of truth: change both copies in the same sitting.
 
