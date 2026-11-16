@@ -18,6 +18,10 @@ Workflows any dwarvesf repo can call from its own `.github/workflows/`:
 - `mini-ci.yml`: runs a repo's test gate on the self-hosted Mac Mini runner
   instead of GitHub-hosted runners. Trusted CI only.
 
+- `macos-app-ci.yml`: tests for a macOS app in the `macos-ui` VM, Release
+  build on the Mini host runner, warm DerivedData. Standard and checklist:
+  [docs/macos-app-ci.md](docs/macos-app-ci.md); org template "Dwarves macOS app CI".
+
 To adopt `mini-ci`, add one job:
 `uses: dwarvesf/.github/.github/workflows/mini-ci.yml@master` with a
 `test_command` input. The file header lists the inputs and the scope rule.
