@@ -12,6 +12,7 @@ name: macos app ci
 #         project: MyApp/MyApp.xcodeproj
 #         test_scheme: MyApp
 #         release_scheme: MyAppDirect   # optional; built on default-branch pushes and manual runs
+#         parallel_testing: true        # optional; test classes run in parallel test processes
 #
 # Both jobs run inside the mac-ui VM on the Mac Mini, never on the host: tests on the
 # macos-ui runner (they may open the app), the Release build on the macos-build runner
@@ -37,6 +38,18 @@ on:
         description: Cheap scripted checks to run before xcodebuild; empty skips
         type: string
         default: ""
+      pre_build_command:
+        description: Command to run before the Release build (for example, generate the project); empty skips
+        type: string
+        default: ""
+      test_action:
+        description: "xcodebuild action of the test job: test, or build-for-testing for a destination with no runtime to run on"
+        type: string
+        default: test
+      parallel_testing:
+        description: Run test classes in parallel test processes (xcodebuild -parallel-testing-enabled YES); false leaves the scheme setting
+        type: boolean
+        default: false
       destination:
         type: string
         default: "platform=macOS,arch=arm64"
@@ -74,12 +87,18 @@ jobs:
           PROJECT: ${{ inputs.project }}
           SCHEME: ${{ inputs.test_scheme }}
           DEST: ${{ inputs.destination }}
+          ACTION: ${{ inputs.test_action }}
+          PARALLEL: ${{ inputs.parallel_testing }}
         run: |
           set -o pipefail
           cache="$HOME/ci-cache/${GITHUB_REPOSITORY//\//_}"
           case "$PROJECT" in *.xcworkspace) kind=-workspace ;; *) kind=-project ;; esac
-          xcodebuild test "$kind" "$PROJECT" -scheme "$SCHEME" -destination "$DEST" \
+          case "$ACTION" in test | build-for-testing) ;; *) echo "test_action must be test or build-for-testing, not: $ACTION"; exit 1 ;; esac
+          parallel=()
+          if [ "$PARALLEL" = true ]; then parallel=(-parallel-testing-enabled YES); fi
+          xcodebuild "$ACTION" "$kind" "$PROJECT" -scheme "$SCHEME" -destination "$DEST" \
             -derivedDataPath "$cache/test" -clonedSourcePackagesDirPath "$cache/test-spm" \
+            ${parallel[@]+"${parallel[@]}"} \
             CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER=
 
       - name: Quit the test host
@@ -94,6 +113,12 @@ jobs:
       - uses: actions/checkout@v5
         with:
           persist-credentials: false
+
+      - name: Pre-build command
+        if: inputs.pre_build_command != ''
+        env:
+          PRE_BUILD_COMMAND: ${{ inputs.pre_build_command }}
+        run: eval "$PRE_BUILD_COMMAND"
 
       - name: Release build
         env:
