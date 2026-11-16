@@ -1,6 +1,6 @@
 {
   "name": "Dwarves macOS app CI",
-  "description": "Tests run in the macos-ui VM on the Mac Mini, the Release build on the Mini host runner, with warm DerivedData. Follows docs/macos-app-ci.md.",
+  "description": "Tests and the Release build run in the macOS VM on the Mac Mini, side by side, with warm DerivedData. Standard: consolelabs/.github docs/macos-app-ci.md.",
   "iconName": "octicon device-desktop",
   "categories": ["Continuous integration", "Swift"],
   "filePatterns": ["\\.xcodeproj$", "\\.xcworkspace$"]
