@@ -1,6 +1,9 @@
+# Mirror of consolelabs/.github/.github/workflows/macos-app-ci.yml, the source of truth
+# (standard: consolelabs/.github docs/macos-app-ci.md). Kept for dwarvesf repos until they
+# move to consolelabs; change both together.
 name: macos app ci
 
-# Reusable CI for Dwarves macOS apps. The standard it implements: docs/macos-app-ci.md.
+# Reusable CI for Dwarves macOS apps. The standard it implements: consolelabs/.github docs/macos-app-ci.md.
 #
 #   jobs:
 #     ci:
@@ -8,12 +11,13 @@ name: macos app ci
 #       with:
 #         project: MyApp/MyApp.xcodeproj
 #         test_scheme: MyApp
-#         release_scheme: MyAppDirect   # optional; built on pushes only
+#         release_scheme: MyAppDirect   # optional; built on default-branch pushes and manual runs
 #
-# Tests run on the macos-ui runner, a macOS VM on the Mac Mini, because app-hosted
-# tests launch the app and must never open it on the Mini's own screen. The Release
-# build runs on the Mini's host runner, on pushes to the default branch only. Both keep DerivedData and SwiftPM checkouts
-# on the runner's own disk between runs; no actions/cache round trip.
+# Both jobs run inside the mac-ui VM on the Mac Mini, never on the host: tests on the
+# macos-ui runner (they may open the app), the Release build on the macos-build runner
+# (pushes to the default branch only), side by side. Each job keeps its own DerivedData
+# and SwiftPM checkouts on the VM disk between runs; no actions/cache round trip.
+# No job runs as the Mini's own user, so a collaborator's workflow edit cannot reach it.
 on:
   workflow_call:
     inputs:
@@ -26,7 +30,7 @@ on:
         type: string
         required: true
       release_scheme:
-        description: Scheme built in Release on pushes only; empty skips
+        description: Scheme built in Release on default-branch pushes and manual runs; empty skips
         type: string
         default: ""
       pre_test_command:
@@ -43,7 +47,7 @@ on:
       build_runner:
         description: JSON label list for the Release build job
         type: string
-        default: '["self-hosted", "macOS", "ARM64"]'
+        default: '["self-hosted", "macos-build"]'
 
 permissions:
   contents: read
@@ -75,7 +79,7 @@ jobs:
           cache="$HOME/ci-cache/${GITHUB_REPOSITORY//\//_}"
           case "$PROJECT" in *.xcworkspace) kind=-workspace ;; *) kind=-project ;; esac
           xcodebuild test "$kind" "$PROJECT" -scheme "$SCHEME" -destination "$DEST" \
-            -derivedDataPath "$cache/test" -clonedSourcePackagesDirPath "$cache/spm" \
+            -derivedDataPath "$cache/test" -clonedSourcePackagesDirPath "$cache/test-spm" \
             CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER=
 
       - name: Quit the test host
@@ -83,7 +87,7 @@ jobs:
         run: pkill -f "$HOME/ci-cache/${GITHUB_REPOSITORY//\//_}/test/Build/" || true
 
   release:
-    if: inputs.release_scheme != '' && github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
+    if: inputs.release_scheme != '' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ${{ fromJSON(inputs.build_runner) }}
     timeout-minutes: 20
     steps:
@@ -100,5 +104,5 @@ jobs:
           cache="$HOME/ci-cache/${GITHUB_REPOSITORY//\//_}"
           case "$PROJECT" in *.xcworkspace) kind=-workspace ;; *) kind=-project ;; esac
           xcodebuild build "$kind" "$PROJECT" -scheme "$SCHEME" -configuration Release \
-            -derivedDataPath "$cache/release" -clonedSourcePackagesDirPath "$cache/spm" \
+            -derivedDataPath "$cache/release" -clonedSourcePackagesDirPath "$cache/release-spm" \
             CODE_SIGNING_ALLOWED=NO -quiet
