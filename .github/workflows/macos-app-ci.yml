@@ -64,6 +64,7 @@ jobs:
         run: eval "$PRE_TEST_COMMAND"
 
       # Ad hoc signing: a runner LaunchAgent cannot reach a login-keychain signing key.
+      # No -quiet here: it hides the assertion text of a failing test.
       - name: Test
         env:
           PROJECT: ${{ inputs.project }}
@@ -75,8 +76,7 @@ jobs:
           case "$PROJECT" in *.xcworkspace) kind=-workspace ;; *) kind=-project ;; esac
           xcodebuild test "$kind" "$PROJECT" -scheme "$SCHEME" -destination "$DEST" \
             -derivedDataPath "$cache/test" -clonedSourcePackagesDirPath "$cache/spm" \
-            CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= \
-            -quiet
+            CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER=
 
       - name: Quit the test host
         if: always()
