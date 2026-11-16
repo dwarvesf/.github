@@ -12,7 +12,7 @@ name: macos app ci
 #
 # Tests run on the macos-ui runner, a macOS VM on the Mac Mini, because app-hosted
 # tests launch the app and must never open it on the Mini's own screen. The Release
-# build runs on the Mini's host runner. Both keep DerivedData and SwiftPM checkouts
+# build runs on the Mini's host runner, on pushes to the default branch only. Both keep DerivedData and SwiftPM checkouts
 # on the runner's own disk between runs; no actions/cache round trip.
 on:
   workflow_call:
@@ -59,7 +59,9 @@ jobs:
 
       - name: Pre-test checks
         if: inputs.pre_test_command != ''
-        run: ${{ inputs.pre_test_command }}
+        env:
+          PRE_TEST_COMMAND: ${{ inputs.pre_test_command }}
+        run: eval "$PRE_TEST_COMMAND"
 
       # Ad hoc signing: a runner LaunchAgent cannot reach a login-keychain signing key.
       - name: Test
@@ -72,7 +74,7 @@ jobs:
           cache="$HOME/ci-cache/${GITHUB_REPOSITORY//\//_}"
           case "$PROJECT" in *.xcworkspace) kind=-workspace ;; *) kind=-project ;; esac
           xcodebuild test "$kind" "$PROJECT" -scheme "$SCHEME" -destination "$DEST" \
-            -derivedDataPath "$cache/test" -clonedSourcePackagesDirPath "$HOME/ci-cache/spm" \
+            -derivedDataPath "$cache/test" -clonedSourcePackagesDirPath "$cache/spm" \
             CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER= \
             -quiet
 
@@ -81,7 +83,7 @@ jobs:
         run: pkill -f "$HOME/ci-cache/${GITHUB_REPOSITORY//\//_}/test/Build/" || true
 
   release:
-    if: inputs.release_scheme != '' && github.event_name == 'push'
+    if: inputs.release_scheme != '' && github.event_name == 'push' && github.ref == format('refs/heads/{0}', github.event.repository.default_branch)
     runs-on: ${{ fromJSON(inputs.build_runner) }}
     timeout-minutes: 20
     steps:
@@ -98,5 +100,5 @@ jobs:
           cache="$HOME/ci-cache/${GITHUB_REPOSITORY//\//_}"
           case "$PROJECT" in *.xcworkspace) kind=-workspace ;; *) kind=-project ;; esac
           xcodebuild build "$kind" "$PROJECT" -scheme "$SCHEME" -configuration Release \
-            -derivedDataPath "$cache/release" -clonedSourcePackagesDirPath "$HOME/ci-cache/spm" \
+            -derivedDataPath "$cache/release" -clonedSourcePackagesDirPath "$cache/spm" \
             CODE_SIGNING_ALLOWED=NO -quiet

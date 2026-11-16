@@ -29,11 +29,11 @@ Measured on hacker-bar, hidden and blurred (Nov 2026): the queue wait was a few 
 | DerivedData and SwiftPM checkouts live on the runner's disk (`~/ci-cache/<owner>_<repo>/`), never in `$RUNNER_TEMP` | hacker-bar rebuilt from scratch every run: 80 s of its 106 s job. blurred keeps DerivedData and drops from 30 s to 9 s when nothing changed. |
 | No `actions/cache` on self-hosted runners | The local disk already persists. hidden spends about 10 s per job restoring and saving its cache. |
 | Release build only on pushes to the default branch | hacker-bar built Release on every PR and again on the merge push. |
-| `paths-ignore` for docs, plus `concurrency` with `cancel-in-progress` | hacker-bar ran 66 times in 24 h, docs-only commits included, on one serial runner. |
+| `paths-ignore` for docs, plus `concurrency` that cancels superseded PR runs (never a default-branch run) | hacker-bar ran 66 times in 24 h, docs-only commits included, on one serial runner. |
 | Pure-logic code gets a test target without `TEST_HOST` | An app-hosted test pays about 15 to 20 s of app startup; hacker-bar's tests themselves run in about 2 s. blurred has no test host and is the fastest. |
 | `xcodebuild -quiet` instead of grep filters | Errors and warnings still print; the log stays short and keeps step timing readable. |
 
-Reset a bad cache by deleting `~/ci-cache/<owner>_<repo>/` on the runner; the next run rebuilds cold.
+Each repo's DerivedData and SwiftPM checkouts sit under `~/ci-cache/<owner>_<repo>/` on the runner. Reset a bad cache by deleting that folder; the next run rebuilds cold. The VM disk is fixed size and nothing prunes these folders yet, so check `df -h` in the VM when a new app joins.
 
 ## Safety rules
 
@@ -41,6 +41,7 @@ Reset a bad cache by deleting `~/ci-cache/<owner>_<repo>/` on the runner; the ne
 - CI signs ad hoc. Developer ID signing and notarization run on a release machine, never on a runner.
 - Test hosts are stopped by their exact DerivedData path, never by a broad `pkill` pattern: a broad pattern once killed a parallel CI run's test host.
 - `timeout-minutes: 20` on every job.
+- Callers use `@master`, like `mini-ci.yml`. A change to the reusable workflow reaches every app at once, so it goes through review and a pilot run first.
 
 ## New app checklist
 
