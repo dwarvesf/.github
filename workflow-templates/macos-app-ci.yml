@@ -1,0 +1,28 @@
+name: CI
+
+# Starter for a dwarvesf macOS app. The standard and the reasons: docs/macos-app-ci.md
+# in dwarvesf/.github. Fill in the three paths, delete release_scheme if the app has
+# no separate release scheme, and keep the rest as is.
+
+on:
+  pull_request:
+    paths-ignore: ["**/*.md", "docs/**", "LICENSE", ".github/ISSUE_TEMPLATE/**"]
+  push:
+    branches: [$default-branch]
+    paths-ignore: ["**/*.md", "docs/**", "LICENSE", ".github/ISSUE_TEMPLATE/**"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  ci:
+    uses: dwarvesf/.github/.github/workflows/macos-app-ci.yml@master
+    with:
+      project: MyApp/MyApp.xcodeproj
+      test_scheme: MyApp
+      release_scheme: MyAppDirect
