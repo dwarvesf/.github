@@ -10,15 +10,27 @@ name: macos app ci
 #       uses: dwarvesf/.github/.github/workflows/macos-app-ci.yml@master
 #       with:
 #         project: MyApp/MyApp.xcodeproj
-#         test_scheme: MyApp
+#         logic_scheme: MyAppLogic      # optional; tests with no TEST_HOST; build runner, every run
+#         screen_scheme: MyApp          # optional; app-hosted and render tests; screen runner
+#         ui_paths: |                   # optional; a PR runs the screen job only if its diff touches one
+#           MyApp/Views/**
+#           **/*.xib
 #         release_scheme: MyAppDirect   # optional; built on default-branch pushes and manual runs
 #         parallel_testing: true        # optional; test classes run in parallel test processes
 #
-# Both jobs run inside the mac-ui VM on the Mac Mini, never on the host: tests on the
-# macos-ui runner (they may open the app), the Release build on the macos-build runner
-# (pushes to the default branch only), side by side. Each job keeps its own DerivedData
-# and SwiftPM checkouts on the VM disk between runs; no actions/cache round trip.
-# No job runs as the Mini's own user, so a collaborator's workflow edit cannot reach it.
+# A test goes where its needs put it. Logic tests (logic_scheme), build-for-testing and iOS
+# Simulator runs go to the build runner; app-hosted and render tests (screen_scheme) go to the
+# screen runner, the only one that may open an app. test_scheme still works: it is the old name
+# of screen_scheme. All jobs run inside the macOS VM on the Mac Mini, never on the host. Each job
+# keeps its own DerivedData and SwiftPM checkouts on the VM disk between runs; no actions/cache
+# round trip. No job runs as the Mini's own user, so a collaborator's workflow edit cannot reach it.
+#
+# Cancel superseded PR runs in the caller. A group here would collide with the caller's own,
+# because inside a reusable workflow github.workflow is the caller's workflow name.
+#
+#   concurrency:
+#     group: ${{ github.workflow }}-${{ github.ref }}
+#     cancel-in-progress: ${{ github.event_name == 'pull_request' }}
 on:
   workflow_call:
     inputs:
@@ -26,16 +38,28 @@ on:
         description: Path to the .xcodeproj or .xcworkspace
         type: string
         required: true
-      test_scheme:
-        description: Scheme whose tests run on every PR and push
+      logic_scheme:
+        description: Scheme of tests with no TEST_HOST; runs on build_runner on every call; empty skips
         type: string
-        required: true
+        default: ""
+      screen_scheme:
+        description: Scheme of app-hosted and render tests; runs on test_runner (on build_runner for build-for-testing or an iOS Simulator test); empty skips
+        type: string
+        default: ""
+      test_scheme:
+        description: Old name of screen_scheme, kept for existing callers; screen_scheme wins when both are set
+        type: string
+        default: ""
+      ui_paths:
+        description: Newline or comma list of path globs; when set, a PR runs the screen job only if its diff touches one (pushes and manual runs always run it); empty always runs it
+        type: string
+        default: ""
       release_scheme:
         description: Scheme built in Release on default-branch pushes and manual runs; empty skips
         type: string
         default: ""
       pre_test_command:
-        description: Cheap scripted checks to run before xcodebuild; empty skips
+        description: Cheap scripted checks to run before xcodebuild in the logic and screen jobs; empty skips
         type: string
         default: ""
       pre_build_command:
@@ -43,7 +67,7 @@ on:
         type: string
         default: ""
       test_action:
-        description: "xcodebuild action of the test job: test, or build-for-testing for a destination with no runtime to run on"
+        description: "xcodebuild action of the test jobs: test, or build-for-testing for a destination with no runtime to run on (the screen job then runs on build_runner)"
         type: string
         default: test
       parallel_testing:
@@ -51,14 +75,15 @@ on:
         type: boolean
         default: false
       destination:
+        description: xcodebuild destination of the logic and screen jobs; an iOS Simulator test runs on build_runner
         type: string
         default: "platform=macOS,arch=arm64"
       test_runner:
-        description: JSON label list for the test job
+        description: JSON label list for the screen job
         type: string
         default: '["self-hosted", "macos-ui"]'
       build_runner:
-        description: JSON label list for the Release build job
+        description: JSON label list for the logic job, build-for-testing and iOS Simulator runs, path detection and the Release build
         type: string
         default: '["self-hosted", "macos-build"]'
 
@@ -66,8 +91,97 @@ permissions:
   contents: read
 
 jobs:
+  # Decides whether a PR touches ui_paths. Fails open: if the diff cannot be read, the screen
+  # job runs. Pushes, manual runs and callers without ui_paths skip this job and always run it.
+  detect:
+    if: inputs.ui_paths != '' && github.event_name == 'pull_request' && (inputs.screen_scheme != '' || inputs.test_scheme != '')
+    runs-on: ${{ fromJSON(inputs.build_runner) }}
+    timeout-minutes: 5
+    outputs:
+      run: ${{ steps.paths.outputs.run }}
+    steps:
+      # The checkout is the PR merge commit; depth 2 keeps both parents, so HEAD^1 (the base
+      # tip) against HEAD is exactly the PR's changes.
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+          persist-credentials: false
+
+      - name: Match changed files against ui_paths
+        id: paths
+        env:
+          UI_PATHS: ${{ inputs.ui_paths }}
+        run: |
+          run=true
+          changed=
+          if git rev-parse --verify -q 'HEAD^2' > /dev/null && changed=$(git -c core.quotepath=off diff --name-only 'HEAD^1' HEAD); then
+            patterns=$(printf '%s\n' "$UI_PATHS" | tr ',' '\n' | sed 's/^[[:space:]]*//; s/[[:space:]]*$//' | grep -v '^$' || true)
+            run=false
+            while IFS= read -r file; do
+              [ -n "$file" ] || continue
+              while IFS= read -r pat; do
+                [ -n "$pat" ] || continue
+                case "$pat" in */) pat="${pat}**" ;; esac
+                # shellcheck disable=SC2053 # the unquoted pattern is the glob
+                # bash globs: * also crosses /, so a/** and a/* are the same; **/x also matches a top-level x
+                if [[ $file == $pat ]] || { [[ $pat == '**/'* ]] && [[ $file == ${pat#'**/'} ]]; }; then
+                  echo "ui path touched: $file (matches $pat)"
+                  run=true
+                  break 2
+                fi
+              done <<< "$patterns"
+            done <<< "$changed"
+          else
+            echo "could not read the PR diff; running the screen job"
+          fi
+          echo "run=$run" >> "$GITHUB_OUTPUT"
+          echo "screen job runs: $run"
+
+  logic:
+    if: inputs.logic_scheme != ''
+    runs-on: ${{ fromJSON(inputs.build_runner) }}
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          persist-credentials: false
+
+      - name: Pre-test checks
+        if: inputs.pre_test_command != ''
+        env:
+          PRE_TEST_COMMAND: ${{ inputs.pre_test_command }}
+        run: eval "$PRE_TEST_COMMAND"
+
+      # No TEST_HOST, so nothing opens an app. No -quiet: it hides a failing test's assertion text.
+      - name: Test
+        env:
+          PROJECT: ${{ inputs.project }}
+          SCHEME: ${{ inputs.logic_scheme }}
+          DEST: ${{ inputs.destination }}
+          ACTION: ${{ inputs.test_action }}
+          PARALLEL: ${{ inputs.parallel_testing }}
+        run: |
+          set -o pipefail
+          cache="$HOME/ci-cache/${GITHUB_REPOSITORY//\//_}"
+          case "$PROJECT" in *.xcworkspace) kind=-workspace ;; *) kind=-project ;; esac
+          case "$ACTION" in test | build-for-testing) ;; *) echo "test_action must be test or build-for-testing, not: $ACTION"; exit 1 ;; esac
+          parallel=()
+          if [ "$PARALLEL" = true ]; then parallel=(-parallel-testing-enabled YES); fi
+          xcodebuild "$ACTION" "$kind" "$PROJECT" -scheme "$SCHEME" -destination "$DEST" \
+            -derivedDataPath "$cache/logic" -clonedSourcePackagesDirPath "$cache/logic-spm" \
+            ${parallel[@]+"${parallel[@]}"} \
+            CODE_SIGN_IDENTITY=- CODE_SIGN_STYLE=Manual DEVELOPMENT_TEAM= PROVISIONING_PROFILE_SPECIFIER=
+
+  # The screen job keeps the id "test", so a caller's check name ("<caller job> / test") does not
+  # change. It runs screen_scheme (or the old test_scheme) on the screen runner, except that
+  # build-for-testing and iOS Simulator runs need no screen and go to the build runner.
   test:
-    runs-on: ${{ fromJSON(inputs.test_runner) }}
+    needs: detect
+    if: >-
+      ${{ !cancelled()
+      && (inputs.screen_scheme != '' || inputs.test_scheme != '')
+      && !(needs.detect.result == 'success' && needs.detect.outputs.run == 'false') }}
+    runs-on: ${{ fromJSON((inputs.test_action == 'build-for-testing' || contains(inputs.destination, 'iOS Simulator')) && inputs.build_runner || inputs.test_runner) }}
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v5
@@ -85,7 +199,7 @@ jobs:
       - name: Test
         env:
           PROJECT: ${{ inputs.project }}
-          SCHEME: ${{ inputs.test_scheme }}
+          SCHEME: ${{ inputs.screen_scheme != '' && inputs.screen_scheme || inputs.test_scheme }}
           DEST: ${{ inputs.destination }}
           ACTION: ${{ inputs.test_action }}
           PARALLEL: ${{ inputs.parallel_testing }}
